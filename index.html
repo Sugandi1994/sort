@@ -3,386 +3,410 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SortLink - Pemendek Tautan</title>
-    <!-- Muat Tailwind CSS -->
+    <title>Penghapus Latar Belakang (Background) Foto</title>
+    <!-- Memuat Tailwind CSS untuk styling yang cepat dan responsif -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        /* Gaya kustom untuk memastikan kanvas dan kontrol terlihat bagus */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f7fafc;
+        }
+        #canvas-container {
+            position: relative;
+            /* Ukuran container utama untuk kanvas, responsif di mobile */
+            max-width: 90vw;
+            max-height: 70vh;
+            margin: auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden; /* Penting agar kuas tidak keluar batas */
+            background-color: #fff;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            padding: 2rem 1rem;
+            align-items: center;
         }
-        .container-card {
-            max-width: 500px;
-            width: 100%;
+        #drawing-canvas, #display-canvas {
+            cursor: crosshair;
+            display: block;
+            background-color: transparent;
+        }
+        /* Style untuk kuas penghapus */
+        #brush-preview {
+            position: absolute;
+            pointer-events: none; /* Agar tidak menghalangi interaksi kanvas */
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            background-color: rgba(255, 0, 0, 0.5); /* Warna overlay saat menghapus */
+            display: none; /* Sembunyikan secara default */
+            z-index: 10;
+        }
+        .control-group {
             background-color: white;
-            padding: 2rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-        }
-        .input-group input, .input-group button {
-            border-radius: 0.75rem;
-        }
-        .custom-button {
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .custom-button:hover {
-            transform: translateY(-1px);
-        }
-        .custom-button:active {
-            transform: translateY(0);
-        }
-        /* Style untuk Pesan */
-        .message-box {
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            margin-top: 1rem;
-            display: none;
-            word-wrap: break-word;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
     </style>
 </head>
-<body>
-    <div class="container-card">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">SortLink</h1>
-        <p class="text-center text-gray-500 mb-6">Pemendek Tautan Simpel dengan Firestore</p>
+<body class="p-4 md:p-8">
 
-        <!-- Bagian 1: Pemendek Tautan -->
-        <div class="bg-indigo-50 p-6 rounded-xl shadow-inner mb-8">
-            <h2 class="text-xl font-semibold text-indigo-700 mb-4">1. Pendekkan Tautan Anda</h2>
-            <div class="input-group flex flex-col gap-4">
-                <input
-                    id="longUrlInput"
-                    type="url"
-                    placeholder="Masukkan Tautan Panjang (mis: https://google.com/very/long/path)"
-                    class="p-3 border border-gray-300 w-full focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                <button
-                    id="shortenButton"
-                    onclick="shortenUrl()"
-                    class="custom-button bg-indigo-600 text-white p-3 font-semibold hover:bg-indigo-700 disabled:opacity-50"
-                >
-                    Pendekkan Tautan!
-                </button>
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">
+            Aplikasi Penghapus Latar Belakang Sederhana
+        </h1>
+
+        <!-- Area Kontrol Atas -->
+        <div class="control-group mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <!-- Input File -->
+            <label for="imageUpload" class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Pilih Foto
+                <input type="file" id="imageUpload" accept="image/*" class="hidden" />
+            </label>
+
+            <!-- Kontrol Kuas/Brush -->
+            <div class="flex items-center space-x-4">
+                <label for="brushSize" class="text-gray-700 font-medium whitespace-nowrap">Ukuran Kuas: <span id="brushSizeValue" class="font-bold text-indigo-600">50</span></label>
+                <input type="range" id="brushSize" min="10" max="200" value="50" class="w-full md:w-40 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
             </div>
 
-            <!-- Area Hasil Tautan Pendek -->
-            <div id="resultBox" class="message-box bg-green-100 border border-green-300 text-green-800 flex items-center justify-between" style="display: none;">
-                <span id="shortUrlDisplay" class="font-medium mr-4"></span>
-                <button
-                    onclick="copyToClipboard()"
-                    class="ml-auto text-sm font-semibold text-green-600 hover:text-green-800 py-1 px-3 bg-green-200 rounded-lg transition duration-150"
-                >
-                    Salin
-                </button>
-            </div>
+            <!-- Tombol Simpan -->
+            <button id="saveButton" disabled class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Simpan PNG (Transparan)
+            </button>
         </div>
 
-        <!-- Bagian 2: Pemeriksa Tautan Asli (Simulasi Redirect) -->
-        <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">2. Periksa Tautan Asli</h2>
-            <p class="text-sm text-gray-500 mb-3">
-                Masukkan **kode pendek** (mis: 'abcd12') untuk melihat tautan aslinya.
+        <!-- Kontainer Kanvas & Preview Kuas -->
+        <div id="canvas-container" class="w-full h-96 bg-gray-200 border-dashed border-2 border-gray-400">
+            <!-- Kanvas 1: Menampilkan Foto Asli & Hasil Masking (yang akan kita simpan) -->
+            <canvas id="display-canvas" class="absolute top-0 left-0"></canvas>
+
+            <!-- Kanvas 2: Untuk menggambar mask/area yang akan dihapus -->
+            <canvas id="drawing-canvas" class="absolute top-0 left-0"></canvas>
+
+            <!-- Preview Kuas -->
+            <div id="brush-preview"></div>
+
+            <p id="infoMessage" class="text-gray-500 text-lg p-4">
+                Pilih foto untuk memulai!
             </p>
-            <div class="input-group flex flex-col gap-4">
-                <input
-                    id="shortCodeInput"
-                    type="text"
-                    placeholder="Masukkan Kode Pendek (Contoh: abcd12)"
-                    class="p-3 border border-gray-300 w-full focus:ring-gray-500 focus:border-gray-500"
-                >
-                <button
-                    id="checkButton"
-                    onclick="checkOriginalUrl()"
-                    class="custom-button bg-gray-600 text-white p-3 font-semibold hover:bg-gray-700 disabled:opacity-50"
-                >
-                    Cari Tautan Asli
-                </button>
-            </div>
-
-            <!-- Area Hasil Tautan Asli -->
-            <div id="checkResultBox" class="message-box bg-blue-100 border border-blue-300 text-blue-800" style="display: none;">
-                <p class="font-medium mb-1">Tautan Asli Ditemukan:</p>
-                <a id="originalUrlDisplay" href="#" target="_blank" class="text-blue-600 underline truncate hover:text-blue-800 block"></a>
-            </div>
         </div>
-        
-        <!-- Pesan Umum (Error/Status) -->
-        <div id="statusMessage" class="message-box bg-red-100 border border-red-300 text-red-800" style="display: none;"></div>
+
+        <!-- Area Pesan (untuk error/informasi) -->
+        <div id="statusMessage" class="mt-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg hidden"></div>
     </div>
 
-    <!-- Script Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, collection, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        // Inisialisasi variabel global
+        let image = null;
+        let isDrawing = false;
+        let brushSize = 50;
+        let lastX = 0;
+        let lastY = 0;
+        let originalWidth = 0;
+        let originalHeight = 0;
 
-        // Atur log level untuk debugging Firestore
-        setLogLevel('Debug');
+        // Mendapatkan elemen DOM
+        const container = document.getElementById('canvas-container');
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        const displayCanvas = document.getElementById('display-canvas');
+        const imageUpload = document.getElementById('imageUpload');
+        const brushSizeInput = document.getElementById('brushSize');
+        const brushSizeValue = document.getElementById('brushSizeValue');
+        const saveButton = document.getElementById('saveButton');
+        const infoMessage = document.getElementById('infoMessage');
+        const brushPreview = document.getElementById('brush-preview');
+        const statusMessage = document.getElementById('statusMessage');
 
-        // Global Variables
-        let db;
-        let auth;
-        let userId = 'anonymous'; // Default for unauthenticated/unresolved state
-        const COLLECTION_NAME = 'short_links';
+        // Mendapatkan konteks 2D untuk kanvas
+        const drawingCtx = drawingCanvas.getContext('2d');
+        const displayCtx = displayCanvas.getContext('2d');
 
-        // Ambil konfigurasi dari lingkungan Canvas
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // --- FUNGSI UTILITY ---
 
-        // Fungsi untuk mendapatkan path koleksi (Public Data)
-        // DIPINDAHKAN ke scope utama modul agar bisa diakses oleh shortenUrl dan checkOriginalUrl
-        function getPublicCollectionRef() {
-            // Path: /artifacts/{appId}/public/data/short_links
-            // db diasumsikan telah diinisialisasi di blok 'else'
-            return collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`);
+        // Fungsi untuk menampilkan pesan status/error
+        function showStatus(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-4 p-3 rounded-lg ${isError ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`;
+            statusMessage.style.display = 'block';
         }
-        
-        // Sign In - DIPINDAHKAN ke scope utama modul
-        async function initializeAuth() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
+
+        // Fungsi untuk menyembunyikan pesan status
+        function hideStatus() {
+            statusMessage.style.display = 'none';
+        }
+
+        // Fungsi yang dipanggil saat ukuran kanvas berubah (resize atau pemuatan gambar baru)
+        function resizeCanvases() {
+            if (!image) return;
+
+            // Hitung rasio untuk menyesuaikan gambar ke container
+            const containerW = container.clientWidth;
+            const containerH = container.clientHeight;
+
+            const ratioX = containerW / originalWidth;
+            const ratioY = containerH / originalHeight;
+            const ratio = Math.min(ratioX, ratioY);
+
+            // Tentukan ukuran baru kanvas berdasarkan rasio yang paling kecil
+            const newW = originalWidth * ratio;
+            const newH = originalHeight * ratio;
+
+            // Set ukuran fisik elemen kanvas
+            drawingCanvas.style.width = displayCanvas.style.width = `${newW}px`;
+            drawingCanvas.style.height = displayCanvas.style.height = `${newH}px`;
+
+            // Set resolusi internal kanvas
+            drawingCanvas.width = displayCanvas.width = newW;
+            drawingCanvas.height = displayCanvas.height = newH;
+
+            // Terapkan kembali gambar pada kanvas utama
+            redrawDisplay();
+
+            // Atur konteks gambar untuk kanvas masking
+            drawingCtx.lineCap = 'round';
+            drawingCtx.lineJoin = 'round';
+            drawingCtx.globalCompositeOperation = 'destination-out'; // Mode penghapusan
+        }
+
+        // Fungsi untuk menggambar ulang kanvas tampilan utama
+        function redrawDisplay() {
+            if (!image) return;
+
+            const w = displayCanvas.width;
+            const h = displayCanvas.height;
+
+            // 1. Gambar latar belakang kotak-kotak (transparansi)
+            drawCheckerboard(displayCtx, w, h);
+
+            // 2. Gambar foto asli
+            displayCtx.drawImage(image, 0, 0, w, h);
+
+            // 3. Terapkan masking dari drawingCanvas ke displayCanvas (memotong area yang dihapus)
+            // Simpan kondisi kanvas saat ini
+            displayCtx.save();
+
+            // Set operasi komposit untuk menggunakan mask (hanya tampilkan area yang TIDAK di-mask)
+            // source-atop: Gambar sumber (mask) diletakkan di atas tujuan, hanya di bagian yang sudah ada pikselnya.
+            // Kita akan menggunakan drawingCanvas sebagai mask!
+            displayCtx.globalCompositeOperation = 'destination-out';
+            displayCtx.drawImage(drawingCanvas, 0, 0, w, h);
+
+            // Kembalikan ke operasi komposit default
+            displayCtx.restore();
+        }
+
+        // Fungsi untuk membuat latar belakang kotak-kotak transparan
+        function drawCheckerboard(ctx, w, h) {
+            const size = 15;
+            const color1 = '#ccc';
+            const color2 = '#ddd';
+
+            ctx.clearRect(0, 0, w, h); // Hapus dulu
+
+            for (let y = 0; y < h; y += size) {
+                for (let x = 0; x < w; x += size) {
+                    ctx.fillStyle = ((x / size) % 2 === (y / size) % 2) ? color1 : color2;
+                    ctx.fillRect(x, y, size, size);
                 }
-            } catch (error) {
-                console.error("Kesalahan otentikasi:", error);
-                showMessage("Gagal menginisialisasi otentikasi. Coba muat ulang.", 'error');
             }
         }
 
+        // --- EVENT HANDLERS ---
 
-        if (!firebaseConfig) {
-            console.error("Firebase config tidak tersedia. Aplikasi tidak dapat berjalan.");
-            document.getElementById('statusMessage').textContent = "ERROR: Konfigurasi Firebase tidak ditemukan.";
-            document.getElementById('statusMessage').style.display = 'block';
-        } else {
-            // Inisialisasi Firebase
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
+        // Pemuatan Gambar
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-            // Authentication Listener
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    userId = user.uid;
-                    console.log("Pengguna terautentikasi:", userId);
-                } else {
-                    console.log("Pengguna tidak terautentikasi.");
-                }
-            });
+            hideStatus();
+            infoMessage.style.display = 'none';
+            saveButton.disabled = true;
 
-            // Panggil inisialisasi setelah db dan auth didefinisikan
-            initializeAuth();
-        }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                image = new Image();
+                image.onload = () => {
+                    originalWidth = image.width;
+                    originalHeight = image.height;
 
-        // Ekspos fungsi ke window agar dapat dipanggil dari HTML
-        window.shortenUrl = shortenUrl;
-        window.checkOriginalUrl = checkOriginalUrl;
-        window.copyToClipboard = copyToClipboard;
+                    // Bersihkan kanvas masking (mask awal harus kosong/putih)
+                    drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                    
+                    resizeCanvases();
+                    saveButton.disabled = false;
+                    showStatus('Foto siap diedit. Gunakan kuas untuk menghapus latar belakang.', false);
+                };
+                image.onerror = () => {
+                    showStatus('Gagal memuat gambar. Pastikan file adalah format gambar yang valid.', true);
+                    image = null;
+                };
+                image.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
 
-        function showMessage(message, type) {
-            const statusBox = document.getElementById('statusMessage');
-            statusBox.textContent = message;
-            statusBox.style.display = 'block';
-            statusBox.className = 'message-box border';
+        // Update Ukuran Kuas
+        brushSizeInput.addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value, 10);
+            brushSizeValue.textContent = brushSize;
+            brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
+        });
 
-            if (type === 'success') {
-                statusBox.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
-            } else if (type === 'error') {
-                statusBox.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
-            } else { // info
-                statusBox.classList.add('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+        // --- LOGIKA MOUSE/TOUCH (MENGGAMBAR) ---
+
+        // Fungsi untuk mendapatkan koordinat relatif
+        function getCanvasCoords(event) {
+            const rect = drawingCanvas.getBoundingClientRect();
+            let clientX, clientY;
+
+            if (event.touches && event.touches.length > 0) {
+                // Untuk peristiwa sentuhan (touch event)
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                // Untuk peristiwa mouse
+                clientX = event.clientX;
+                clientY = event.clientY;
             }
-        }
-        
-        function hideMessage() {
-            document.getElementById('statusMessage').style.display = 'none';
+
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+
+            return { x, y };
         }
 
-        function validateUrl(url) {
-            try {
-                // Cek apakah URL memiliki protokol yang valid (http/https)
-                new URL(url);
-                return true;
-            } catch (e) {
-                return false;
+        // Mulai Menggambar
+        function startDrawing(e) {
+            e.preventDefault();
+            if (!image) return;
+
+            isDrawing = true;
+            const coords = getCanvasCoords(e);
+            lastX = coords.x;
+            lastY = coords.y;
+
+            // Gambar titik awal
+            draw(lastX, lastY);
+        }
+
+        // Menggambar
+        function draw(x, y) {
+            // Skala ukuran kuas berdasarkan resolusi kanvas vs ukuran elemen
+            const scaleX = drawingCanvas.width / drawingCanvas.clientWidth;
+            const scaleY = drawingCanvas.height / drawingCanvas.clientHeight;
+
+            drawingCtx.lineWidth = brushSize * scaleX; // Sesuaikan lebar kuas
+
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(lastX * scaleX, lastY * scaleY);
+            drawingCtx.lineTo(x * scaleX, y * scaleY);
+            drawingCtx.strokeStyle = 'red'; // Warna ini tidak terlihat karena destination-out
+            drawingCtx.stroke();
+
+            lastX = x;
+            lastY = y;
+
+            // Setelah menggambar mask, perbarui tampilan utama
+            redrawDisplay();
+        }
+
+        // Selama Menggambar/Mouse Bergerak
+        function whileDrawing(e) {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+
+            // Perbarui preview kuas
+            brushPreview.style.left = `${coords.x - (brushSize / 2)}px`;
+            brushPreview.style.top = `${coords.y - (brushSize / 2)}px`;
+
+            if (!isDrawing) return;
+
+            draw(coords.x, coords.y);
+        }
+
+        // Akhiri Menggambar
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Mouse Enter/Leave (Tampilkan/Sembunyikan Kuas Preview)
+        container.addEventListener('mouseenter', () => {
+            if (image) {
+                brushPreview.style.display = 'block';
+                brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
             }
-        }
+        });
+        container.addEventListener('mouseleave', () => {
+            brushPreview.style.display = 'none';
+            stopDrawing(); // Pastikan berhenti menggambar jika keluar
+        });
 
-        function setButtonsDisabled(disabled) {
-            document.getElementById('shortenButton').disabled = disabled;
-            document.getElementById('checkButton').disabled = disabled;
-        }
-        
-        // --- Fungsi Utama SortLink ---
+        // Event listener untuk Mouse
+        drawingCanvas.addEventListener('mousedown', startDrawing);
+        drawingCanvas.addEventListener('mousemove', whileDrawing);
+        drawingCanvas.addEventListener('mouseup', stopDrawing);
 
-        /**
-         * Menghasilkan kode pendek acak (6 karakter)
-         * @returns {string} Kode pendek
-         */
-        function generateShortCode() {
-            // Menggunakan bagian dari UUID untuk memastikan keunikan yang tinggi
-            return crypto.randomUUID().replace(/-/g, '').substring(0, 6);
-        }
+        // Event listener untuk Touch
+        drawingCanvas.addEventListener('touchstart', startDrawing);
+        drawingCanvas.addEventListener('touchmove', whileDrawing);
+        drawingCanvas.addEventListener('touchend', stopDrawing);
 
-        /**
-         * Memproses tautan panjang dan menyimpannya ke Firestore
-         */
-        async function shortenUrl() {
-            hideMessage();
-            document.getElementById('resultBox').style.display = 'none';
-            setButtonsDisabled(true);
+        // --- SIMPAN FILE PNG ---
 
-            const longUrl = document.getElementById('longUrlInput').value.trim();
-
-            if (!longUrl) {
-                showMessage("Masukkan tautan yang valid.", 'error');
-                setButtonsDisabled(false);
+        saveButton.addEventListener('click', () => {
+            if (!image) {
+                showStatus('Tidak ada gambar yang dimuat untuk disimpan.', true);
                 return;
             }
 
-            if (!validateUrl(longUrl)) {
-                showMessage("Format tautan tidak valid. Pastikan diawali dengan http:// atau https://", 'error');
-                setButtonsDisabled(false);
-                return;
-            }
+            // 1. Buat kanvas resolusi penuh untuk menyimpan hasil
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = originalWidth;
+            finalCanvas.height = originalHeight;
+            const finalCtx = finalCanvas.getContext('2d');
 
-            showMessage("Memproses dan menyimpan tautan...", 'info');
+            // 2. Gambar foto asli ke kanvas final
+            finalCtx.drawImage(image, 0, 0, originalWidth, originalHeight);
 
-            // --- Mulai Logika Penyimpanan ---
-            let shortCode = generateShortCode();
-            let isUnique = false;
-            let retries = 0;
+            // 3. Terapkan mask dari drawingCanvas ke kanvas final
+            // Skala drawingCanvas ke resolusi originalWidth/originalHeight
+            const tempMaskCanvas = document.createElement('canvas');
+            tempMaskCanvas.width = originalWidth;
+            tempMaskCanvas.height = originalHeight;
+            const tempMaskCtx = tempMaskCanvas.getContext('2d');
+            
+            // Atur mask kanvas agar sesuai dengan apa yang digambar di drawingCanvas (yang skalanya lebih kecil)
+            tempMaskCtx.drawImage(drawingCanvas, 0, 0, tempMaskCanvas.width, tempMaskCanvas.height);
 
-            // Pastikan kode pendek unik (maks 5 kali percobaan)
-            while (!isUnique && retries < 5) {
-                const q = query(getPublicCollectionRef(), where("code", "==", shortCode));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    isUnique = true;
-                } else {
-                    shortCode = generateShortCode(); // Coba kode baru
-                    retries++;
-                }
-            }
+            // Terapkan mask ke gambar asli
+            finalCtx.globalCompositeOperation = 'destination-out';
+            finalCtx.drawImage(tempMaskCanvas, 0, 0);
 
-            if (!isUnique) {
-                showMessage("Gagal menghasilkan kode pendek unik setelah beberapa percobaan.", 'error');
-                setButtonsDisabled(false);
-                return;
-            }
+            // 4. Unduh file
+            const dataURL = finalCanvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'foto-tanpa-background.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
 
-            try {
-                const docRef = doc(getPublicCollectionRef()); // Dokumen baru
-                
-                await setDoc(docRef, {
-                    code: shortCode,
-                    originalUrl: longUrl,
-                    userId: userId,
-                    createdAt: Date.now()
-                });
+            showStatus('Gambar berhasil disimpan sebagai PNG transparan!', false);
+        });
 
-                // Tampilkan tautan pendek
-                const shortUrlDisplay = document.getElementById('shortUrlDisplay');
-                // Simulasikan tautan pendek menggunakan ID aplikasi dan kode pendek
-                const simulatedShortUrl = `[${appId}]/${shortCode}`;
 
-                shortUrlDisplay.textContent = simulatedShortUrl;
-                shortUrlDisplay.setAttribute('data-full-url', simulatedShortUrl); // Simpan URL untuk disalin
-                document.getElementById('resultBox').style.display = 'flex';
-                
-                showMessage("Tautan berhasil diperpendek dan disimpan!", 'success');
-                document.getElementById('longUrlInput').value = ''; // Bersihkan input
+        // --- SETUP AWAL ---
 
-            } catch (e) {
-                console.error("Error saat menyimpan dokumen: ", e);
-                showMessage("Gagal menyimpan tautan ke database. Cek konsol.", 'error');
-            } finally {
-                setButtonsDisabled(false);
-            }
-        }
+        // Pastikan kanvas menyesuaikan ukuran saat jendela diubah
+        window.addEventListener('resize', resizeCanvases);
 
-        /**
-         * Mencari tautan asli berdasarkan kode pendek
-         */
-        async function checkOriginalUrl() {
-            hideMessage();
-            document.getElementById('checkResultBox').style.display = 'none';
-            setButtonsDisabled(true);
+        // Set ukuran awal kuas preview
+        brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
 
-            const shortCode = document.getElementById('shortCodeInput').value.trim();
-
-            if (!shortCode) {
-                showMessage("Masukkan kode pendek terlebih dahulu.", 'error');
-                setButtonsDisabled(false);
-                return;
-            }
-
-            showMessage(`Mencari tautan asli untuk kode: ${shortCode}...`, 'info');
-
-            try {
-                // Query Firestore untuk mencari dokumen dengan 'code' yang sesuai
-                const q = query(getPublicCollectionRef(), where("code", "==", shortCode));
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    // Ditemukan! Ambil data dokumen pertama
-                    const docData = querySnapshot.docs[0].data();
-                    const originalUrl = docData.originalUrl;
-
-                    const originalUrlDisplay = document.getElementById('originalUrlDisplay');
-                    originalUrlDisplay.textContent = originalUrl;
-                    originalUrlDisplay.href = originalUrl;
-                    document.getElementById('checkResultBox').style.display = 'block';
-
-                    showMessage(`Tautan asli ditemukan!`, 'success');
-                } else {
-                    showMessage(`Kode pendek '${shortCode}' tidak ditemukan di database.`, 'error');
-                }
-
-            } catch (e) {
-                console.error("Error saat mencari dokumen: ", e);
-                showMessage("Gagal mencari tautan di database. Cek konsol.", 'error');
-            } finally {
-                setButtonsDisabled(false);
-            }
-        }
-
-        /**
-         * Menyalin tautan pendek yang dihasilkan ke clipboard
-         */
-        function copyToClipboard() {
-            const shortUrlDisplay = document.getElementById('shortUrlDisplay');
-            const textToCopy = shortUrlDisplay.getAttribute('data-full-url');
-
-            if (textToCopy) {
-                // Menggunakan execCommand karena navigator.clipboard mungkin diblokir di iFrame
-                const tempInput = document.createElement("input");
-                tempInput.value = textToCopy;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-
-                // Ganti tombol salin menjadi disalin sementara
-                const copyButton = shortUrlDisplay.nextElementSibling;
-                copyButton.textContent = 'Tersalin!';
-                setTimeout(() => {
-                    copyButton.textContent = 'Salin';
-                }, 2000);
-            }
-        }
     </script>
 </body>
 </html>
