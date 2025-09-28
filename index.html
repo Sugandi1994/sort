@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SortLink - Pemendek Tautan</title>
+    <!-- Muat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .container-card {
+            max-width: 500px;
+            width: 100%;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        .input-group input, .input-group button {
+            border-radius: 0.75rem;
+        }
+        .custom-button {
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .custom-button:hover {
+            transform: translateY(-1px);
+        }
+        .custom-button:active {
+            transform: translateY(0);
+        }
+        /* Style untuk Pesan */
+        .message-box {
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            display: none;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-card">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2 text-center">SortLink</h1>
+        <p class="text-center text-gray-500 mb-6">Pemendek Tautan Simpel dengan Firestore</p>
+
+        <!-- Bagian 1: Pemendek Tautan -->
+        <div class="bg-indigo-50 p-6 rounded-xl shadow-inner mb-8">
+            <h2 class="text-xl font-semibold text-indigo-700 mb-4">1. Pendekkan Tautan Anda</h2>
+            <div class="input-group flex flex-col gap-4">
+                <input
+                    id="longUrlInput"
+                    type="url"
+                    placeholder="Masukkan Tautan Panjang (mis: https://google.com/very/long/path)"
+                    class="p-3 border border-gray-300 w-full focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                <button
+                    id="shortenButton"
+                    onclick="shortenUrl()"
+                    class="custom-button bg-indigo-600 text-white p-3 font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                >
+                    Pendekkan Tautan!
+                </button>
+            </div>
+
+            <!-- Area Hasil Tautan Pendek -->
+            <div id="resultBox" class="message-box bg-green-100 border border-green-300 text-green-800 flex items-center justify-between" style="display: none;">
+                <span id="shortUrlDisplay" class="font-medium mr-4"></span>
+                <button
+                    onclick="copyToClipboard()"
+                    class="ml-auto text-sm font-semibold text-green-600 hover:text-green-800 py-1 px-3 bg-green-200 rounded-lg transition duration-150"
+                >
+                    Salin
+                </button>
+            </div>
+        </div>
+
+        <!-- Bagian 2: Pemeriksa Tautan Asli (Simulasi Redirect) -->
+        <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">2. Periksa Tautan Asli</h2>
+            <p class="text-sm text-gray-500 mb-3">
+                Masukkan **kode pendek** (mis: 'abcd12') untuk melihat tautan aslinya.
+            </p>
+            <div class="input-group flex flex-col gap-4">
+                <input
+                    id="shortCodeInput"
+                    type="text"
+                    placeholder="Masukkan Kode Pendek (Contoh: abcd12)"
+                    class="p-3 border border-gray-300 w-full focus:ring-gray-500 focus:border-gray-500"
+                >
+                <button
+                    id="checkButton"
+                    onclick="checkOriginalUrl()"
+                    class="custom-button bg-gray-600 text-white p-3 font-semibold hover:bg-gray-700 disabled:opacity-50"
+                >
+                    Cari Tautan Asli
+                </button>
+            </div>
+
+            <!-- Area Hasil Tautan Asli -->
+            <div id="checkResultBox" class="message-box bg-blue-100 border border-blue-300 text-blue-800" style="display: none;">
+                <p class="font-medium mb-1">Tautan Asli Ditemukan:</p>
+                <a id="originalUrlDisplay" href="#" target="_blank" class="text-blue-600 underline truncate hover:text-blue-800 block"></a>
+            </div>
+        </div>
+        
+        <!-- Pesan Umum (Error/Status) -->
+        <div id="statusMessage" class="message-box bg-red-100 border border-red-300 text-red-800" style="display: none;"></div>
+    </div>
+
+    <!-- Script Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Atur log level untuk debugging Firestore
+        setLogLevel('Debug');
+
+        // Global Variables
+        let db;
+        let auth;
+        let userId = 'anonymous'; // Default for unauthenticated/unresolved state
+        const COLLECTION_NAME = 'short_links';
+
+        // Ambil konfigurasi dari lingkungan Canvas
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Fungsi untuk mendapatkan path koleksi (Public Data)
+        // DIPINDAHKAN ke scope utama modul agar bisa diakses oleh shortenUrl dan checkOriginalUrl
+        function getPublicCollectionRef() {
+            // Path: /artifacts/{appId}/public/data/short_links
+            // db diasumsikan telah diinisialisasi di blok 'else'
+            return collection(db, `artifacts/${appId}/public/data/${COLLECTION_NAME}`);
+        }
+        
+        // Sign In - DIPINDAHKAN ke scope utama modul
+        async function initializeAuth() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Kesalahan otentikasi:", error);
+                showMessage("Gagal menginisialisasi otentikasi. Coba muat ulang.", 'error');
+            }
+        }
+
+
+        if (!firebaseConfig) {
+            console.error("Firebase config tidak tersedia. Aplikasi tidak dapat berjalan.");
+            document.getElementById('statusMessage').textContent = "ERROR: Konfigurasi Firebase tidak ditemukan.";
+            document.getElementById('statusMessage').style.display = 'block';
+        } else {
+            // Inisialisasi Firebase
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Authentication Listener
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("Pengguna terautentikasi:", userId);
+                } else {
+                    console.log("Pengguna tidak terautentikasi.");
+                }
+            });
+
+            // Panggil inisialisasi setelah db dan auth didefinisikan
+            initializeAuth();
+        }
+
+        // Ekspos fungsi ke window agar dapat dipanggil dari HTML
+        window.shortenUrl = shortenUrl;
+        window.checkOriginalUrl = checkOriginalUrl;
+        window.copyToClipboard = copyToClipboard;
+
+        function showMessage(message, type) {
+            const statusBox = document.getElementById('statusMessage');
+            statusBox.textContent = message;
+            statusBox.style.display = 'block';
+            statusBox.className = 'message-box border';
+
+            if (type === 'success') {
+                statusBox.classList.add('bg-green-100', 'border-green-300', 'text-green-800');
+            } else if (type === 'error') {
+                statusBox.classList.add('bg-red-100', 'border-red-300', 'text-red-800');
+            } else { // info
+                statusBox.classList.add('bg-yellow-100', 'border-yellow-300', 'text-yellow-800');
+            }
+        }
+        
+        function hideMessage() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        function validateUrl(url) {
+            try {
+                // Cek apakah URL memiliki protokol yang valid (http/https)
+                new URL(url);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function setButtonsDisabled(disabled) {
+            document.getElementById('shortenButton').disabled = disabled;
+            document.getElementById('checkButton').disabled = disabled;
+        }
+        
+        // --- Fungsi Utama SortLink ---
+
+        /**
+         * Menghasilkan kode pendek acak (6 karakter)
+         * @returns {string} Kode pendek
+         */
+        function generateShortCode() {
+            // Menggunakan bagian dari UUID untuk memastikan keunikan yang tinggi
+            return crypto.randomUUID().replace(/-/g, '').substring(0, 6);
+        }
+
+        /**
+         * Memproses tautan panjang dan menyimpannya ke Firestore
+         */
+        async function shortenUrl() {
+            hideMessage();
+            document.getElementById('resultBox').style.display = 'none';
+            setButtonsDisabled(true);
+
+            const longUrl = document.getElementById('longUrlInput').value.trim();
+
+            if (!longUrl) {
+                showMessage("Masukkan tautan yang valid.", 'error');
+                setButtonsDisabled(false);
+                return;
+            }
+
+            if (!validateUrl(longUrl)) {
+                showMessage("Format tautan tidak valid. Pastikan diawali dengan http:// atau https://", 'error');
+                setButtonsDisabled(false);
+                return;
+            }
+
+            showMessage("Memproses dan menyimpan tautan...", 'info');
+
+            // --- Mulai Logika Penyimpanan ---
+            let shortCode = generateShortCode();
+            let isUnique = false;
+            let retries = 0;
+
+            // Pastikan kode pendek unik (maks 5 kali percobaan)
+            while (!isUnique && retries < 5) {
+                const q = query(getPublicCollectionRef(), where("code", "==", shortCode));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    isUnique = true;
+                } else {
+                    shortCode = generateShortCode(); // Coba kode baru
+                    retries++;
+                }
+            }
+
+            if (!isUnique) {
+                showMessage("Gagal menghasilkan kode pendek unik setelah beberapa percobaan.", 'error');
+                setButtonsDisabled(false);
+                return;
+            }
+
+            try {
+                const docRef = doc(getPublicCollectionRef()); // Dokumen baru
+                
+                await setDoc(docRef, {
+                    code: shortCode,
+                    originalUrl: longUrl,
+                    userId: userId,
+                    createdAt: Date.now()
+                });
+
+                // Tampilkan tautan pendek
+                const shortUrlDisplay = document.getElementById('shortUrlDisplay');
+                // Simulasikan tautan pendek menggunakan ID aplikasi dan kode pendek
+                const simulatedShortUrl = `[${appId}]/${shortCode}`;
+
+                shortUrlDisplay.textContent = simulatedShortUrl;
+                shortUrlDisplay.setAttribute('data-full-url', simulatedShortUrl); // Simpan URL untuk disalin
+                document.getElementById('resultBox').style.display = 'flex';
+                
+                showMessage("Tautan berhasil diperpendek dan disimpan!", 'success');
+                document.getElementById('longUrlInput').value = ''; // Bersihkan input
+
+            } catch (e) {
+                console.error("Error saat menyimpan dokumen: ", e);
+                showMessage("Gagal menyimpan tautan ke database. Cek konsol.", 'error');
+            } finally {
+                setButtonsDisabled(false);
+            }
+        }
+
+        /**
+         * Mencari tautan asli berdasarkan kode pendek
+         */
+        async function checkOriginalUrl() {
+            hideMessage();
+            document.getElementById('checkResultBox').style.display = 'none';
+            setButtonsDisabled(true);
+
+            const shortCode = document.getElementById('shortCodeInput').value.trim();
+
+            if (!shortCode) {
+                showMessage("Masukkan kode pendek terlebih dahulu.", 'error');
+                setButtonsDisabled(false);
+                return;
+            }
+
+            showMessage(`Mencari tautan asli untuk kode: ${shortCode}...`, 'info');
+
+            try {
+                // Query Firestore untuk mencari dokumen dengan 'code' yang sesuai
+                const q = query(getPublicCollectionRef(), where("code", "==", shortCode));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    // Ditemukan! Ambil data dokumen pertama
+                    const docData = querySnapshot.docs[0].data();
+                    const originalUrl = docData.originalUrl;
+
+                    const originalUrlDisplay = document.getElementById('originalUrlDisplay');
+                    originalUrlDisplay.textContent = originalUrl;
+                    originalUrlDisplay.href = originalUrl;
+                    document.getElementById('checkResultBox').style.display = 'block';
+
+                    showMessage(`Tautan asli ditemukan!`, 'success');
+                } else {
+                    showMessage(`Kode pendek '${shortCode}' tidak ditemukan di database.`, 'error');
+                }
+
+            } catch (e) {
+                console.error("Error saat mencari dokumen: ", e);
+                showMessage("Gagal mencari tautan di database. Cek konsol.", 'error');
+            } finally {
+                setButtonsDisabled(false);
+            }
+        }
+
+        /**
+         * Menyalin tautan pendek yang dihasilkan ke clipboard
+         */
+        function copyToClipboard() {
+            const shortUrlDisplay = document.getElementById('shortUrlDisplay');
+            const textToCopy = shortUrlDisplay.getAttribute('data-full-url');
+
+            if (textToCopy) {
+                // Menggunakan execCommand karena navigator.clipboard mungkin diblokir di iFrame
+                const tempInput = document.createElement("input");
+                tempInput.value = textToCopy;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                // Ganti tombol salin menjadi disalin sementara
+                const copyButton = shortUrlDisplay.nextElementSibling;
+                copyButton.textContent = 'Tersalin!';
+                setTimeout(() => {
+                    copyButton.textContent = 'Salin';
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
