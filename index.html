@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penghapus Latar Belakang (Background) Foto</title>
+    <title>Penghapus Latar Belakang (Background) Foto AI</title>
     <!-- Memuat Tailwind CSS untuk styling yang cepat dan responsif -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -48,35 +48,65 @@
             border-radius: 0.5rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
         }
+        /* Style untuk loading spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
 
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-extrabold text-gray-900 mb-6 text-center">
-            Aplikasi Penghapus Latar Belakang Sederhana
+            Penghapus Latar Belakang Foto (Manual & AI)
         </h1>
 
         <!-- Area Kontrol Atas -->
-        <div class="control-group mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <!-- Input File -->
-            <label for="imageUpload" class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                Pilih Foto
-                <input type="file" id="imageUpload" accept="image/*" class="hidden" />
-            </label>
+        <div class="control-group mb-6 flex flex-col lg:flex-row items-center justify-between gap-4 p-4">
+            
+            <!-- Group 1: File Upload & Save -->
+            <div class="flex flex-wrap items-center gap-4">
+                <!-- Input File -->
+                <label for="imageUpload" class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    1. Pilih Foto
+                    <input type="file" id="imageUpload" accept="image/*" class="hidden" />
+                </label>
+            
+                <!-- Tombol Simpan -->
+                <button id="saveButton" disabled class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Simpan PNG
+                </button>
+            </div>
 
-            <!-- Kontrol Kuas/Brush -->
-            <div class="flex items-center space-x-4">
-                <label for="brushSize" class="text-gray-700 font-medium whitespace-nowrap">Ukuran Kuas: <span id="brushSizeValue" class="font-bold text-indigo-600">50</span></label>
+            <!-- Group 2: AI Auto Removal -->
+            <div class="flex items-center gap-4">
+                 <!-- Tombol Hapus Otomatis AI -->
+                <button id="aiRemoveButton" disabled class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50 flex items-center">
+                    <span id="aiButtonText" class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9.75 10m0 0l-3-3m3 3h7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        2. Hapus Otomatis (AI)
+                    </span>
+                    <div id="aiLoadingSpinner" class="spinner hidden ml-2"></div>
+                </button>
+            </div>
+
+            <!-- Group 3: Manual Brush Controls -->
+            <div class="flex items-center space-x-4 mt-4 lg:mt-0">
+                <label for="brushSize" class="text-gray-700 font-medium whitespace-nowrap">3. Ukuran Kuas: <span id="brushSizeValue" class="font-bold text-indigo-600">50</span></label>
                 <input type="range" id="brushSize" min="10" max="200" value="50" class="w-full md:w-40 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
             </div>
 
-            <!-- Tombol Simpan -->
-            <button id="saveButton" disabled class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md disabled:opacity-50 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Simpan PNG (Transparan)
-            </button>
         </div>
 
         <!-- Kontainer Kanvas & Preview Kuas -->
@@ -84,7 +114,7 @@
             <!-- Kanvas 1: Menampilkan Foto Asli & Hasil Masking (yang akan kita simpan) -->
             <canvas id="display-canvas" class="absolute top-0 left-0"></canvas>
 
-            <!-- Kanvas 2: Untuk menggambar mask/area yang akan dihapus -->
+            <!-- Kanvas 2: Untuk menggambar mask/area yang akan dihapus (Manual) -->
             <canvas id="drawing-canvas" class="absolute top-0 left-0"></canvas>
 
             <!-- Preview Kuas -->
@@ -108,6 +138,11 @@
         let lastY = 0;
         let originalWidth = 0;
         let originalHeight = 0;
+        let originalMimeType = ''; // Untuk menyimpan tipe file asli
+        let originalBase64 = ''; // Untuk menyimpan Base64 asli tanpa prefix
+
+        const API_KEY = ""; // Kunci API akan disediakan oleh lingkungan
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=" + API_KEY;
 
         // Mendapatkan elemen DOM
         const container = document.getElementById('canvas-container');
@@ -117,6 +152,9 @@
         const brushSizeInput = document.getElementById('brushSize');
         const brushSizeValue = document.getElementById('brushSizeValue');
         const saveButton = document.getElementById('saveButton');
+        const aiRemoveButton = document.getElementById('aiRemoveButton');
+        const aiButtonText = document.getElementById('aiButtonText');
+        const aiLoadingSpinner = document.getElementById('aiLoadingSpinner');
         const infoMessage = document.getElementById('infoMessage');
         const brushPreview = document.getElementById('brush-preview');
         const statusMessage = document.getElementById('statusMessage');
@@ -125,7 +163,23 @@
         const drawingCtx = drawingCanvas.getContext('2d');
         const displayCtx = displayCanvas.getContext('2d');
 
-        // --- FUNGSI UTILITY ---
+        // --- FUNGSI UTILITY & UI ---
+
+        function setLoadingState(isLoading) {
+            aiRemoveButton.disabled = isLoading || !image;
+            saveButton.disabled = isLoading || !image;
+            brushSizeInput.disabled = isLoading;
+            drawingCanvas.style.pointerEvents = isLoading ? 'none' : 'auto';
+            
+            if (isLoading) {
+                aiButtonText.classList.add('hidden');
+                aiLoadingSpinner.classList.remove('hidden');
+                showStatus('Memproses gambar secara otomatis dengan AI. Mohon tunggu...', false);
+            } else {
+                aiButtonText.classList.remove('hidden');
+                aiLoadingSpinner.classList.add('hidden');
+            }
+        }
 
         // Fungsi untuk menampilkan pesan status/error
         function showStatus(message, isError = false) {
@@ -182,20 +236,14 @@
             // 1. Gambar latar belakang kotak-kotak (transparansi)
             drawCheckerboard(displayCtx, w, h);
 
-            // 2. Gambar foto asli
+            // 2. Gambar foto (yang mungkin sudah transparan dari AI)
             displayCtx.drawImage(image, 0, 0, w, h);
 
             // 3. Terapkan masking dari drawingCanvas ke displayCanvas (memotong area yang dihapus)
-            // Simpan kondisi kanvas saat ini
+            // Ini memungkinkan pengguna untuk menyempurnakan hasil AI secara manual
             displayCtx.save();
-
-            // Set operasi komposit untuk menggunakan mask (hanya tampilkan area yang TIDAK di-mask)
-            // source-atop: Gambar sumber (mask) diletakkan di atas tujuan, hanya di bagian yang sudah ada pikselnya.
-            // Kita akan menggunakan drawingCanvas sebagai mask!
             displayCtx.globalCompositeOperation = 'destination-out';
             displayCtx.drawImage(drawingCanvas, 0, 0, w, h);
-
-            // Kembalikan ke operasi komposit default
             displayCtx.restore();
         }
 
@@ -215,19 +263,24 @@
             }
         }
 
-        // --- EVENT HANDLERS ---
+        // --- PEMUATAN GAMBAR ---
 
         // Pemuatan Gambar
         imageUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
+            originalMimeType = file.type;
             hideStatus();
             infoMessage.style.display = 'none';
-            saveButton.disabled = true;
+            setLoadingState(false); // Enable buttons
 
             const reader = new FileReader();
             reader.onload = (event) => {
+                const base64String = event.target.result;
+                // Simpan Base64 data (tanpa prefix "data:image/...")
+                originalBase64 = base64String.split(',')[1];
+
                 image = new Image();
                 image.onload = () => {
                     originalWidth = image.width;
@@ -237,17 +290,142 @@
                     drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
                     
                     resizeCanvases();
-                    saveButton.disabled = false;
-                    showStatus('Foto siap diedit. Gunakan kuas untuk menghapus latar belakang.', false);
+                    showStatus('Foto siap diedit. Pilih "Hapus Otomatis (AI)" atau gunakan kuas manual.', false);
                 };
                 image.onerror = () => {
                     showStatus('Gagal memuat gambar. Pastikan file adalah format gambar yang valid.', true);
                     image = null;
+                    setLoadingState(false);
                 };
-                image.src = event.target.result;
+                image.src = base64String;
             };
             reader.readAsDataURL(file);
         });
+
+        // --- LOGIKA AI (GEMINI) ---
+
+        aiRemoveButton.addEventListener('click', processImageWithAI);
+
+        async function processImageWithAI() {
+            if (!image || !originalBase64) {
+                showStatus('Tidak ada gambar yang dimuat.', true);
+                return;
+            }
+
+            setLoadingState(true);
+            showStatus('Memulai penghapusan latar belakang otomatis oleh AI. Ini mungkin memakan waktu sebentar...', false);
+
+            const userPrompt = "Hapus latar belakang dari gambar ini. Pastikan subjek utama dipertahankan sepenuhnya, dan latar belakang yang dihapus menjadi transparan. Kembalikan gambar hasil edit dalam format PNG.";
+            
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: userPrompt },
+                        {
+                            inlineData: {
+                                // Model lebih fleksibel jika mimeType spesifik
+                                mimeType: originalMimeType || "image/jpeg", 
+                                data: originalBase64 // Data Base64 tanpa prefix
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+
+            try {
+                // Implementasi backoff eksponensial untuk retry
+                const MAX_RETRIES = 3;
+                let response = null;
+                for (let i = 0; i < MAX_RETRIES; i++) {
+                    response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status !== 429) break; // Berhasil atau error lain, keluar dari loop
+
+                    // Retry: Tunggu dengan backoff eksponensial (1s, 2s, 4s, ...)
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    console.warn(`Retry API call ${i + 1}/${MAX_RETRIES} after throttling.`);
+                }
+                
+                if (!response.ok) {
+                    const errorJson = await response.json();
+                    throw new Error(`HTTP Error: ${response.status} - ${errorJson.error?.message || 'Unknown API Error'}`);
+                }
+
+                const result = await response.json();
+                const candidates = result?.candidates;
+
+                if (!candidates || candidates.length === 0) {
+                     // Jika tidak ada kandidat, cek apakah ada pesan error di level atas
+                    const errorMessage = result?.error?.message || 'API mengembalikan respons kosong.';
+                    throw new Error(`Pemrosesan AI gagal. API Error: ${errorMessage}`);
+                }
+                
+                const candidate = candidates[0];
+                const finishReason = candidate.finishReason;
+                
+                // Pengecekan baru: Jika alasan selesai bukan 'STOP', berarti ada pemblokiran atau kesalahan
+                if (finishReason && finishReason !== 'STOP') {
+                    let reasonMessage = `Proses AI diblokir karena alasan: ${finishReason}. `;
+                    if (candidate.safetyRatings && candidate.safetyRatings.length > 0) {
+                        reasonMessage += `Detail: ${candidate.safetyRatings.map(r => `${r.category}: ${r.probability}`).join(', ')}`;
+                    }
+                    console.error("Safety/Block Reason:", candidate.safetyRatings);
+                    throw new Error(reasonMessage + 'Coba gunakan gambar lain.');
+                }
+
+                // Cari data gambar
+                const base64Data = candidate.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                const textResponse = candidate.content?.parts?.find(p => p.text)?.text;
+
+                if (!base64Data) {
+                    // Jika data gambar tidak ada, cek apakah ada teks yang menjelaskan kegagalan
+                    if (textResponse) {
+                        throw new Error(`AI gagal menghasilkan gambar. Respon AI: ${textResponse}`);
+                    }
+                    // Error aslinya
+                    throw new Error('AI gagal mengembalikan gambar yang diedit. Data gambar tidak ditemukan dalam respons.');
+                }
+
+                // Muat gambar hasil AI ke objek Image baru
+                const newImageSrc = `data:image/png;base64,${base64Data}`;
+                const newImage = new Image();
+                newImage.onload = () => {
+                    // 1. Ganti objek gambar global dengan hasil AI yang transparan
+                    image = newImage;
+                    originalWidth = image.width;
+                    originalHeight = image.height;
+
+                    // 2. Bersihkan semua mask manual sebelumnya, karena AI sudah menyediakan hasil akhir
+                    drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                    
+                    // 3. Tampilkan hasil
+                    resizeCanvases(); 
+                    showStatus('Penghapusan latar belakang otomatis selesai. Anda dapat menyimpan hasilnya atau menggunakan kuas manual untuk penyempurnaan.', false);
+                    setLoadingState(false);
+                };
+                newImage.onerror = () => {
+                    throw new Error('Gagal memuat gambar hasil AI. Data Base64 mungkin rusak.');
+                };
+                newImage.src = newImageSrc;
+
+            } catch (error) {
+                console.error("AI Processing Error:", error);
+                showStatus(`Gagal memproses dengan AI: ${error.message}. Coba gunakan penghapus manual.`, true);
+                setLoadingState(false);
+            }
+        }
+
+
+        // --- LOGIKA MANUAL BRUSH (TETAP SAMA) ---
 
         // Update Ukuran Kuas
         brushSizeInput.addEventListener('input', (e) => {
@@ -256,19 +434,15 @@
             brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
         });
 
-        // --- LOGIKA MOUSE/TOUCH (MENGGAMBAR) ---
-
         // Fungsi untuk mendapatkan koordinat relatif
         function getCanvasCoords(event) {
             const rect = drawingCanvas.getBoundingClientRect();
             let clientX, clientY;
 
             if (event.touches && event.touches.length > 0) {
-                // Untuk peristiwa sentuhan (touch event)
                 clientX = event.touches[0].clientX;
                 clientY = event.touches[0].clientY;
             } else {
-                // Untuk peristiwa mouse
                 clientX = event.clientX;
                 clientY = event.clientY;
             }
@@ -282,35 +456,32 @@
         // Mulai Menggambar
         function startDrawing(e) {
             e.preventDefault();
-            if (!image) return;
+            if (!image || aiLoadingSpinner.classList.contains('hidden') === false) return; // Jangan gambar saat loading
 
             isDrawing = true;
             const coords = getCanvasCoords(e);
             lastX = coords.x;
             lastY = coords.y;
 
-            // Gambar titik awal
             draw(lastX, lastY);
         }
 
         // Menggambar
         function draw(x, y) {
-            // Skala ukuran kuas berdasarkan resolusi kanvas vs ukuran elemen
             const scaleX = drawingCanvas.width / drawingCanvas.clientWidth;
             const scaleY = drawingCanvas.height / drawingCanvas.clientHeight;
 
-            drawingCtx.lineWidth = brushSize * scaleX; // Sesuaikan lebar kuas
+            drawingCtx.lineWidth = brushSize * scaleX;
 
             drawingCtx.beginPath();
             drawingCtx.moveTo(lastX * scaleX, lastY * scaleY);
             drawingCtx.lineTo(x * scaleX, y * scaleY);
-            drawingCtx.strokeStyle = 'red'; // Warna ini tidak terlihat karena destination-out
+            drawingCtx.strokeStyle = 'red'; 
             drawingCtx.stroke();
 
             lastX = x;
             lastY = y;
 
-            // Setelah menggambar mask, perbarui tampilan utama
             redrawDisplay();
         }
 
@@ -335,14 +506,14 @@
 
         // Mouse Enter/Leave (Tampilkan/Sembunyikan Kuas Preview)
         container.addEventListener('mouseenter', () => {
-            if (image) {
+            if (image && aiLoadingSpinner.classList.contains('hidden')) {
                 brushPreview.style.display = 'block';
                 brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
             }
         });
         container.addEventListener('mouseleave', () => {
             brushPreview.style.display = 'none';
-            stopDrawing(); // Pastikan berhenti menggambar jika keluar
+            stopDrawing();
         });
 
         // Event listener untuk Mouse
@@ -354,6 +525,7 @@
         drawingCanvas.addEventListener('touchstart', startDrawing);
         drawingCanvas.addEventListener('touchmove', whileDrawing);
         drawingCanvas.addEventListener('touchend', stopDrawing);
+
 
         // --- SIMPAN FILE PNG ---
 
@@ -369,20 +541,19 @@
             finalCanvas.height = originalHeight;
             const finalCtx = finalCanvas.getContext('2d');
 
-            // 2. Gambar foto asli ke kanvas final
+            // 2. Gambar foto (hasil AI atau original) ke kanvas final
             finalCtx.drawImage(image, 0, 0, originalWidth, originalHeight);
 
-            // 3. Terapkan mask dari drawingCanvas ke kanvas final
-            // Skala drawingCanvas ke resolusi originalWidth/originalHeight
+            // 3. Terapkan mask manual (jika ada) ke kanvas final
             const tempMaskCanvas = document.createElement('canvas');
             tempMaskCanvas.width = originalWidth;
             tempMaskCanvas.height = originalHeight;
             const tempMaskCtx = tempMaskCanvas.getContext('2d');
             
-            // Atur mask kanvas agar sesuai dengan apa yang digambar di drawingCanvas (yang skalanya lebih kecil)
+            // Atur mask kanvas agar sesuai dengan apa yang digambar di drawingCanvas
             tempMaskCtx.drawImage(drawingCanvas, 0, 0, tempMaskCanvas.width, tempMaskCanvas.height);
 
-            // Terapkan mask ke gambar asli
+            // Terapkan mask ke gambar
             finalCtx.globalCompositeOperation = 'destination-out';
             finalCtx.drawImage(tempMaskCanvas, 0, 0);
 
@@ -390,7 +561,7 @@
             const dataURL = finalCanvas.toDataURL('image/png');
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = 'foto-tanpa-background.png';
+            a.download = 'foto-tanpa-background-ai-edit.png';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -401,10 +572,7 @@
 
         // --- SETUP AWAL ---
 
-        // Pastikan kanvas menyesuaikan ukuran saat jendela diubah
         window.addEventListener('resize', resizeCanvases);
-
-        // Set ukuran awal kuas preview
         brushPreview.style.width = brushPreview.style.height = `${brushSize}px`;
 
     </script>
